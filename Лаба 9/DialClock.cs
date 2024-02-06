@@ -2,27 +2,28 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Markup;
 
 namespace Лаба_9
 {
-    internal class DialClock
+    public class DialClock
     {
-        private int hours;
-        private int minutes;
+        public int hours;
+        public int minutes;
         static int count = 0;
         public DialClock() // если конструктор пустой
         {
-            this.Hours = 0;
-            this.Minutes = 0;
+            Hours = 0;
+            Minutes = 0;
             count++;
         }
         public DialClock(int hours, int minutes) // конструктор с параметрами
         {
-            this.Hours = hours;
-            this.Minutes = minutes;
+            Hours = hours;
+            Minutes = minutes;
             count++;
         }
         public DialClock(DialClock clock) // конструктор копирования
@@ -31,19 +32,19 @@ namespace Лаба_9
             Minutes = clock.Minutes;
             count++;
         }
-
         public int Hours
         {
             get
             {
-
                 return hours;
             }
             set
             {
-                if (value < 0) value = 0;
-                if (value - 12 >= 0) value = value - 12;
-                else hours = value;
+                if (value < 0 || value >= 24)
+                {
+                    throw new Exception("Часы неправильные");
+                }
+                hours = value;
             }
         }
         public int Minutes
@@ -54,37 +55,81 @@ namespace Лаба_9
             }
             set
             {
-                if (value < 0 || value == 60) { value = 0; }
-                //if (value > 60) { Console.WriteLine("еррор"); }
+                if (value < 0 || value >= 60)
+                {
+                    throw new Exception("Минуты неправильные");
+                }
                 minutes = value;
+                
             }
         }
-        public double GetCorner() //вычисление угла между часовой и минутной стрелкой
+        public static double GetCorner(int hours, int minutes) //статическая функция по вычислению угла
         {
-            double hr = hours; //вспомогательная переменная типа double
-            double bias; //смещение по часовой стрелке
-            double persentage; //процент смещения 
-            double angle; //конечный угол
-            int totalcountminutes = 60; //количество  минут на механических часах
-            int totalcountminutesinhour = 5; //количество рисок в часе на механических часах
-            int degreeminuts = 6; //количество градусов за 1 минуту 
-                
+            const double degreesPerHour = 30.0;  // Угол между часовыми метками
+            const double degreesPerMinute = 6; // Угол между минутными метками вокруг циферблата
 
-            persentage = totalcountminutes * 100 / minutes;
-            bias = totalcountminutesinhour * degreeminuts * persentage / 100;
+            double hourAngle = (hours % 12 + minutes / 60.0) * degreesPerHour; // Вычисления градусной меры часовой стрелки с учётом смещения из-за минутной стрелки
+            double minuteAngle = minutes * degreesPerMinute;
 
-            hr += bias;
+            double angle = Math.Abs(hourAngle - minuteAngle);
 
-            hr *= degreeminuts;
-            minutes *= degreeminuts;
-            angle = Math.Abs(hr - minutes);
-            return angle;
-            
+            if (angle > 180.0)
+            {
+                angle = 360.0 - angle;
+            }
+            return Math.Round(angle, 4);
+        }
+        public double GetCorner() // нестатическая функция по вычислению угла
+        {
+            const double degreesPerHour = 30.0;  // Угол между часовыми метками
+            const double degreesPerMinute = 6; // Угол между минутными метками вокруг циферблата
+
+            if (Hours < 0 || hours > 23 || minutes < 0 || minutes > 59) // Проверка валидности входных данных
+            {
+                throw new ArgumentException("Некорректное время");
+            }
+
+            double hourAngle = (hours % 12 + minutes / 60.0) * degreesPerHour; // Вычисления градусной меры часовой стрелки с учётом смещения из-за минутной стрелки
+            double minuteAngle = minutes * degreesPerMinute;
+
+            double angle = Math.Abs(hourAngle - minuteAngle);
+
+            if (angle > 180.0)
+            {
+                angle = 360.0 - angle;
+            }
+
+            return Math.Round(angle, 4);
+        }
+        public static DialClock operator ++(DialClock clock)
+        {
+            if (clock.Minutes == 59)
+            {
+                clock.Hours += 1;
+                clock.Minutes -= 59;
+                if (clock.Hours == 23)
+                {
+                    clock.Hours -= 23;
+                }
+            }
+            else clock.Minutes++;
+            return clock;
+        }
+
+        public static DialClock operator --(DialClock clock)
+        {
+            if (clock.Minutes == 0)
+            {
+                clock.Hours--;
+                clock.Minutes += 59;
+            }
+            else clock.Minutes--;
+            return clock;
         }
 
         public void Show() //вывод на экран
         {
-            Console.WriteLine($"Часы: {hours}, минуты: {minutes}.");
+            Console.WriteLine($"Часы: {Hours}, минуты: {minutes}.");
         }
 
         public static void ShowStatic(DialClock clock) // вывод на экран (статическая функция)
